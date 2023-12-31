@@ -1,0 +1,98 @@
+//Download and Install Snowsql from below link
+https://docs.snowflake.com/en/user-guide/snowsql-install-config.html#installing-snowsql-on-microsoft-windows-using-the-installer
+
+(or)
+
+//Run below curl command from Command Line
+curl -O https://sfc-repo.snowflakecomputing.com/snowsql/bootstrap/1.2/windows_x86_64/snowsql-1.2.23-windows_x86_64.msi
+
+//Dcoumentation
+https://docs.snowflake.com/en/user-guide/snowsql-install-config.html#installing-snowsql-on-microsoft-windows-using-the-installer
+
+=========================================
+//Login to snowflake from Snowsql client
+snowsql -a ed52115.us-east-2.aws
+
+snowsql -a qwb81195.us-east-1
+
+//Enter user name and passowrd
+
+//Running queries
+SELECT * FROM mydb.public.EMP;
+
+USE WAREHOUSE SAMPLE_WH;
+
+USE DATABASE MYDB;
+
+USE SCHEMA PUBLIC;
+
+SELECT * FROM EMP;
+
+
+// USER STAGE
+//Put your files into user internal stage
+//If your put command is failing with 403 forbidden error, practice this session after AWS-Snowflake integration session(next video in the play list) then it will work.
+
+put file://C:\Users\janar\OneDrive\Documents\Files\pets_data.json @~/staged;
+
+put file://C:\Users\janar\OneDrive\Documents\Files\customer_data_user.csv @~/staged;
+
+list @~/staged;
+
+
+// TABLE STAGE
+//Put your files into table internal stage
+put file://C:\Users\janar\OneDrive\Documents\Files\customer_data_table.csv @%customer_data_table;
+
+//Create customer_data_table to load files from internal stages
+CREATE OR REPLACE TABLE mydb.public.customer_data_table (
+customerid NUMBER,
+custname STRING,
+email STRING,
+city STRING,
+state STRING,
+DOB DATE
+);
+
+put file://C:\Users\janar\OneDrive\Documents\Files\customer_data_table.csv @%customer_data_table;
+
+list @%customer_data_table;
+
+
+//Named Stage
+// Create a schema for internal stages
+CREATE SCHEMA IF NOT EXISTS mydb.internal_stages
+
+//Create a named stage
+CREATE OR REPLACE STAGE mydb.internal_stages.named_customer_stage;
+
+CREATE OR REPLACE STAGE mydb.internal_stages.named_orders_stage;
+
+CREATE OR REPLACE STAGE mydb.internal_stages.named_product_stage;
+
+show stages in mydb.internal_stages;
+
+//Put your files into named internal stage
+put file://C:\Users\janar\OneDrive\Documents\Files\customer_data_named.csv @mydb.internal_stages.named_customer_stage;
+
+list @mydb.internal_stages.named_customer_stage;
+
+
+// Load all files data to the table
+//Copy all these files to table customer_data_table
+
+COPY INTO mydb.public.customer_data_table
+FROM @~/staged/customer_data_user.csv
+file_format = (type = csv field_delimiter = '|' skip_header = 1);
+
+COPY INTO mydb.public.customer_data_table
+FROM @%customer_data_table/customer_data_table.csv
+file_format = (type = csv field_delimiter = '|' skip_header = 1);
+
+COPY INTO mydb.public.customer_data_table
+FROM @mydb.internal_stages.named_customer_stage/customer_data_named.csv
+file_format = (type = csv field_delimiter = '|' skip_header = 1);
+
+
+//Validate the data
+SELECT * FROM mydb.public.customer_data_table;
