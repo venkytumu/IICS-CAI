@@ -11,7 +11,9 @@ SELECT 	USAGE_DATE,
 		FAILSAFE_BYTES / (1024*1024*1024) AS FAILSAFE_GB
 FROM SNOWFLAKE.ACCOUNT_USAGE.STORAGE_USAGE ORDER BY USAGE_DATE DESC;
 
-
+//retention period -->7 days for permanent table 0 days for transient and temporary tables.
+//The retention time for fail safe is non-configurable i.e we cannot change retention period fot fail safe from 7 days to 1 day
+//If the Time Travel retention period for a permanent table is set to 0, it will immediately enter the Fail-safe period when it is dropped.
 // Storage usage on table level
 
 SELECT * FROM SNOWFLAKE.ACCOUNT_USAGE.TABLE_STORAGE_METRICS;

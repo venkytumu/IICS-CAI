@@ -1,0 +1,19 @@
+show tables like '%customers%';
+
+alter table OUR_FIRST_DB.PUBLIC.CUSTOMERS set
+data_retention_time_in_days=1;  
+
+create or replace table OUR_FIRST_DB.PUBLIC.ret_example(
+ id int,
+ first_name string,
+ last_name string,
+ age int,
+ gender string,
+ job string,
+ phone string)
+ data_retention_time_in_days=0;
+ drop table OUR_FIRST_DB.PUBLIC.ret_example;
+ //we are not able to undrop the table if data_retention_time_in_days=0
+ //if data_retention_time_in_days=0, we are not able to do time travel also
+ 
+ undrop table OUR_FIRST_DB.PUBLIC.ret_example;

@@ -1,0 +1,2 @@
+difference between temporary table and transient table-->
+temporary table exist only in current session and also if we close that worksheet then the table is deleted completely.

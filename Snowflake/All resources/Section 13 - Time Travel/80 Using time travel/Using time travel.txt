@@ -91,12 +91,6 @@ SELECT * FROM OUR_FIRST_DB.public.test;
 SELECT * FROM OUR_FIRST_DB.public.test before (timestamp => '2021-04-16 07:30:47.145'::timestamp)
 
 
-
-
-
-
-
-
 // // // Using time travel: Method 3 - before Query ID
 
 // Preparing table
