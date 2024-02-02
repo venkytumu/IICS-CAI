@@ -1,0 +1,383 @@
+ ---creating integration object
+create or replace storage integration s3
+type=external_stage
+storage_provider=s3
+enabled=true
+storage_aws_role_arn='arn:aws:iam::136726299878:role/snowpark'
+storage_allowed_locations=('s3://snowparkbucket16112023/use_cases/');
+create or replace database usecase;
+desc integration s3;
+
+--creating external_stage 
+
+create or replace stage aws_stage 
+    storage_integration=s3
+    url='s3://snowparkbucket16112023/use_cases/'
+    file_format=MANAGE_DB.FILE_FORMATS.JSONFORMAT;
+
+--list of objectsa in stage
+list @aws_stage;
+
+//creating raw table for view data
+create or replace table raw (raw variant);
+
+//creating json file format
+create or replace file format json_file 
+	type=json
+	strip_outer_array=true;
+	
+	
+//copy data from staging to raw table
+copy into raw from @aws_stage/player.json
+	file_format =  json_file
+	MATCH_BY_COLUMN_NAME='CASE_INSENSITIVE';
+	
+
+
+COPY INTO USECASE.PUBLIC.RAW
+    FROM @USECASE.PUBLIC.AWS_STAGE
+    file_format= json_file
+    files = ('match.json');
+
+    
+select * from raw;
+
+--truncate table raw;
+
+select $1 from @aws_stage/match.json;
+
+//data in raw table in specific columns
+select raw:balls_per_over::varchar,
+    raw:city::varchar,
+    raw:event_date::varchar,
+    raw:event_days::varchar,
+    raw:event_group::varchar,
+    raw:event_name::varchar,
+    raw:event_number::varchar,
+    raw:gender::varchar,
+    raw:id::varchar,
+    raw:overs::varchar,
+    raw:season::varchar,
+    raw:team1::varchar,
+    raw:team2::varchar,
+    raw:team_type::varchar,
+    raw:toss_decision::varchar,
+    raw:toss_winner::varchar,
+    raw:type::varchar,
+    raw:venue::varchar
+
+from raw;
+
+//creating a table from the raw table
+
+create or replace table match as 
+(select 
+    raw:balls_per_over::varchar as balls_per_over,
+    raw:city::varchar as city,
+    raw:event_date::varchar as event_date,
+    raw:event_days::varchar as event_days,
+    raw:event_group::varchar as event_group,
+    raw:event_name::varchar as event_name,
+    raw:event_number::varchar as event_number,
+    raw:gender::varchar as gender,
+    raw:id::varchar as id,
+    raw:overs::varchar as overs,
+    raw:season::varchar as season,
+    raw:team1::varchar as team1,
+    raw:team2::varchar as team2,
+    raw:team_type::varchar as team_type,
+    raw:toss_decision::varchar as toss_decision,
+    raw:toss_winner::varchar as toss_winner,
+    raw:type::varchar as type,
+    raw:venue::varchar as venue
+
+from raw);
+
+select * from match;
+//player
+create or replace table raw1 (raw variant);
+
+COPY INTO USECASE.PUBLIC.RAW1
+    FROM @USECASE.PUBLIC.AWS_STAGE
+    file_format= json_file
+    files = ('player.json');
+
+
+select $1 from raw1;
+
+
+create or replace table player as
+(select 
+    raw:match_id::varchar as match_id,
+    raw:player::varchar as player,
+    raw:team::varchar as team
+    from raw1);
+
+select * from player;
+select * from match;
+
+select * from raw2;
+create or replace TABLE delivery as
+(select raw_data:batter::varchar as batter,
+        raw_data:bowler::varchar as bowler,
+        raw_data:delivery::varchar as delivery,
+        raw_data:inning::varchar as inning,
+        raw_data:match_id::varchar as match_id,
+        raw_data:non_striker::varchar as non_striker,
+        raw_data:over::varchar as over,
+        raw_data:run_batter::varchar as run_batter,
+        raw_data:run_bye::varchar as run_bye,
+        raw_data:run_legbye::varchar as run_legbye,
+        raw_data:run_noball::varchar as run_noball,
+        raw_data:run_penalty::varchar as run_penalty,
+        raw_data:run_wide::varchar as run_wide,
+        raw_data:team::varchar as team,
+        raw_data:wicket_fielder::varchar as wicket_fielder,
+        raw_data:wicket_kind::varchar as wicket_kind,
+        raw_data:wicket_player_out::varchar as wicket_player_out
+        from raw2);
+        
+select * from USECASE.PUBLIC.DELIVERY;
+select * from USECASE.PUBLIC.PLAYER;
+select * from USECASE.PUBLIC.MATCH ;
+
+
+
+// batter data
+select  
+    d.batter,
+    sum(d.run_batter) as runs,
+    count(d.delivery) as balls 
+    from delivery d join player p 
+    on (p.match_id=d.match_id and p.player=d.batter) 
+	group by d.batter;
+  
+ //bowlers data
+  select 
+    d.batter,
+    d.bowler,
+    count(d.wicket_kind) as wickets 
+    from delivery d join player p 
+    on (p.match_id=d.match_id and p.player=d.bowler)
+    where wicket_kind not in('run out','hit wicket','retired out','retired not out','retired hurt','hit the ball twice','handled the ball','obstructing the field','') 
+	group by d.bowler,d.batter;
+
+select * from USECASE.PUBLIC.delivery ; //team1,team2,type
+select * from delivery order by match_id asc;
+//
+// how many time the bowler is taken a particular batter
+
+ select 
+    d.batter,
+    d.bowler,
+    count(wicket_kind) as wickets 
+    from delivery d join player p 
+    on (p.match_id=d.match_id and p.player=d.bowler)
+    where wicket_kind not in('run out','hit wicket','retired out','retired not out','retired hurt','hit the ball twice','handled the ball','obstructing the field','') 
+	group by d.bowler,d.batter;
+
+
+  select * from match where event_date='2016-11-03' and type='Test';
+
+select * from match;
+
+//batter data for a praticular match and team
+select  
+    d.batter,m.team1,
+    sum(d.run_batter) as runs,
+    count(d.delivery) as balls
+    
+    
+    from delivery d join player p 
+    on (p.match_id=d.match_id and p.player=d.batter)
+    join match m on (m.id=d.match_id)
+    where m.event_date='2017-01-26' and m.type='ODI' and m.team1='Australia'
+     
+  group by d.batter,m.team1;
+select * from match where event_date='2017-01-26' and type='ODI';
+
+//bowler data for a praticular team and match
+select 
+    d.batter,
+    d.bowler 
+    
+    from delivery d join player p 
+    on (p.match_id=d.match_id and p.player=d.bowler)
+    join match m on (m.id=d.match_id)
+    where wicket_kind not in('run out','hit wicket','retired out','retired not out','retired hurt','hit the ball twice','handled the ball','obstructing the field','') and (m.event_date='2017-01-26' and m.type='ODI' and m.team1='Australia')
+     
+  group by d.bowler,d.batter;
+
+  //batsman data
+  select  
+     d.batter,m.team1,
+    sum(d.run_batter) as runs,
+    count(d.delivery) as balls
+    from delivery d join player p 
+    on (p.match_id=d.match_id and p.player=d.batter)
+    join match m on (m.id=d.match_id)
+    where m.event_date='2017-01-26' and m.type='ODI' and m.team1='Australia'and         
+    p.team='Australia' 
+    group by d.batter,m.team1;
+	
+  select * from match m where m.event_date='2017-01-26' and m.type='ODI' and m.team1='Australia';
+
+  //
+
+
+  select  
+    d.batter,m.team1,
+    sum(d.run_batter) as runs,
+    count(d.delivery) as balls,
+    
+    d.wicket_kind,
+    d.wicket_fielder,
+    d.bowler
+    
+    
+    from delivery d join player p 
+    on (p.match_id=d.match_id and p.player=d.batter)
+    join match m on (m.id=d.match_id )
+    where m.event_date='2017-01-26' and m.type='ODI' and m.team1='Australia' and m.team1=d.team
+    
+  group by d.batter,m.team1,d.bowler, d.wicket_kind,
+    d.wicket_fielder;
+
+
+   select * from delivery where team='India';
+
+   select * from match m where m.event_date='2017-01-26' and m.type='ODI' and m.team1='Australia'
+
+//-------------------Innings Score Board for two team batsman data ----------
+//batsman score
+	create or replace table batsman_score as
+	  select  
+     d.batter,m.team1,
+    sum(d.run_batter) as runs,
+    count(d.delivery) as balls
+    
+    
+    
+    
+    from delivery d join player p 
+    on (p.match_id=d.match_id and p.player=d.batter)
+    join match m on (m.id=d.match_id)
+    where m.event_date='2017-01-26' and m.type='ODI' and m.team1='Australia'and         
+    p.team='Australia' 
+     
+  group by d.batter,m.team1;
+
+  select * from batsman_score;
+
+
+      
+	
+	create or replace table wicket as 
+		 select  
+		d.batter,m.team1,
+
+		d.wicket_kind,
+		d.wicket_fielder,
+		d.bowler
+
+
+		from delivery d join player p 
+		on (p.match_id=d.match_id and p.player=d.batter)
+		join match m on (m.id=d.match_id )
+		where m.event_date='2017-01-26' and m.type='ODI' and m.team1='Australia' and m.team1=d.team
+		and wicket_kind not in ('')
+		group by d.batter,m.team1,d.bowler, d.wicket_kind,
+		d.wicket_fielder;
+
+select * from wicket;
+select b.batter,b.runs ,b.balls,w.wicket_kind,w.wicket_fielder,w.bowler from batsman_score b join wicket w on (b.batter=w.batter);
+
+
+
+//-----------Innings Score Board for two team bowlers data -----
+
+//bowler data for a praticular team and match
+select 
+        d.bowler,
+        FLOOR(CAST(count(CAST(delivery AS INT)) AS DECIMAL) / 6)||'.'||count(bowler)%6 as overs,
+        SUM(CAST( d.run_batter AS INT)) AS runs_given
+        from delivery d join player p 
+        on (p.match_id=d.match_id and p.player=d.bowler)
+        join match m on (m.id=d.match_id)
+        where  (m.event_date='2017-01-26' 
+        and m.type='ODI' 
+        and m.team1='Australia'  
+        and m.team1=d.team )
+     
+        group by d.bowler;
+
+  Select * from delivery;
+
+//bowlers taken wickets data
+select 
+
+        d.bowler,
+        count(d.wicket_kind) as wickets 
+        from delivery d join player p 
+        on (p.match_id=d.match_id and p.player=d.bowler)
+        join match m on (m.id=d.match_id)
+        where wicket_kind not in
+        ('run out',
+        'hit wicket',
+        'retired out',
+        'retired not out',
+        'retired hurt',
+        'hit the ball twice',
+        'handled the ball',
+        'obstructing the field','') and 
+        m.type='ODI' and 
+        m.team1='Australia'and 
+        m.team1=d.team and 
+        m.event_date='2017-01-26'
+        group by d.bowler;
+
+-------BOWLER_DATA -----------------
+create or replace table bowler_data as select 
+        d.bowler,
+
+    FLOOR(CAST(count(CAST(delivery AS INT)) AS DECIMAL) / 6)||'.'||count(bowler)%6 as overs,
+    
+    SUM(CAST( d.run_batter AS INT)) AS runs_given
+    
+    from delivery d join player p 
+    on (p.match_id=d.match_id and p.player=d.bowler)
+    join match m on (m.id=d.match_id)
+    where  (m.event_date='2017-01-26' and m.type='ODI' and m.team1='Australia'  and m.team1=d.team )
+     
+  group by d.bowler;
+
+select * from bowler_data;
+
+//bowlers taken wickets data
+create or replace table bowlers_wick_data as
+    select 
+
+    d.bowler,
+    
+    count(d.wicket_kind) as wickets 
+    
+    from delivery d join player p 
+    on (p.match_id=d.match_id and p.player=d.bowler)
+    join match m on (m.id=d.match_id)
+    where wicket_kind not in('run out','hit wicket','retired out','retired not out','retired hurt','hit the ball twice','handled the ball','obstructing the field','') and m.type='ODI' and m.team1='Australia'  and m.team1=d.team and m.event_date='2017-01-26'
+     
+  group by d.bowler;
+
+select * from bowlers_wick_data;
+select * from bowler_data;
+select  bd.bowler,
+        bd.overs,
+        bd.runs_given, 
+        case
+        when (bw.wickets is null) then 0
+        else bw.wickets
+        end as wickets
+        
+        from bowler_data bd 
+        left join bowlers_wick_data 
+        bw on bd.bowler=bw.bowler;
