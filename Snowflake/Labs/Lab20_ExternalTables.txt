@@ -1,0 +1,121 @@
+================
+External Tables 
+================
+USE DATABASE MYOWN_DB;
+
+// Create a schema for Stage objects
+CREATE SCHEMA IF NOT EXISTS EXT_STAGES;
+
+// Create a schema for File format objects
+CREATE SCHEMA IF NOT EXISTS FILE_FORMATS;
+
+// Create a schema for External Tables
+CREATE SCHEMA IF NOT EXISTS EXT_TABLES;
+
+----------------------------
+
+// Create file format object
+CREATE OR REPLACE FILE FORMAT MYOWN_DB.FILE_FORMATS.CSV_FILEFORMAT
+    type = csv
+    field_delimiter = '|'
+    skip_header = 1
+    empty_field_as_null = TRUE;
+	
+// Create stage object with integration object & file format object
+// Using the Storeage Integration object that was already created
+
+CREATE OR REPLACE STAGE MYOWN_DB.EXT_STAGES.MYS3_STAGE
+    URL = 's3://awss3bucketjana/csv/'
+    STORAGE_INTEGRATION = s3_int
+    FILE_FORMAT = MYOWN_DB.FILE_FORMATS.CSV_FILEFORMAT ;	
+
+	
+//Listing files under my s3 bucket
+LIST @MYOWN_DB.EXT_STAGES.MYS3_STAGE;
+
+--------------------------
+
+//Create External Tables
+
+CREATE OR REPLACE EXTERNAL TABLE EXT_TABLES.ET_S3_CUSTOMER(
+ CUST_ID NUMBER AS (value:c1::NUMBER),
+ CUSTNAME VARCHAR AS (value:c2::VARCHAR),
+ EMAIL VARCHAR AS (value:c3::VARCHAR),
+ CITY VARCHAR AS (value:c4::VARCHAR),
+ STATE VARCHAR AS (value:c5::VARCHAR),
+ DOB DATE AS TO_DATE(value:c6::VARCHAR,'YYYY-MM-DD')
+)
+WITH 
+LOCATION = @MYOWN_DB.EXT_STAGES.MYS3_STAGE
+PATTERN = '.*customer.*'
+FILE_FORMAT = MYOWN_DB.FILE_FORMATS.CSV_FILEFORMAT
+;
+
+SELECT * FROM EXT_TABLES.ET_S3_CUSTOMER;
+
+
+CREATE OR REPLACE EXTERNAL TABLE EXT_TABLES.ET_S3_ORDERS(
+ CUST_ID NUMBER AS (value:c1::NUMBER),
+ NUM_ORDERS NUMBER AS (value:c2::NUMBER)
+)
+WITH 
+LOCATION = @MYOWN_DB.EXT_STAGES.MYS3_STAGE
+PATTERN = '.*orders.*'
+FILE_FORMAT = MYOWN_DB.FILE_FORMATS.CSV_FILEFORMAT
+;
+
+SELECT * FROM EXT_TABLES.ET_S3_ORDERS;
+
+// To see external tables
+DESC EXTERNAL TABLE EXT_TABLES.ET_S3_CUSTOMER TYPE = 'column';
+DESC EXTERNAL TABLE EXT_TABLES.ET_S3_CUSTOMER TYPE = 'stage';
+
+// To see the files it is referring
+SELECT DISTINCT METADATA$FILENAME FROM EXT_TABLES.ET_S3_CUSTOMER;
+
+----------------------------
+
+// Analyze the data
+
+// Requirement: Get the list of customer who placed more than 10 orders
+SELECT C.CUST_ID, C.CUSTNAME, SUM(O.NUM_ORDERS)
+FROM EXT_TABLES.ET_S3_CUSTOMER C
+INNER JOIN EXT_TABLES.ET_S3_ORDERS O
+ON C.CUST_ID=O.CUST_ID
+GROUP BY C.CUST_ID, C.CUSTNAME HAVING SUM(O.NUM_ORDERS) > 10;
+
+
+// Requirement: Get the list of customer who did not placed any order
+SELECT C.CUST_ID, C.CUSTNAME, SUM(O.NUM_ORDERS)
+FROM EXT_TABLES.ET_S3_CUSTOMER C
+INNER JOIN EXT_TABLES.ET_S3_ORDERS O
+ON C.CUST_ID=O.CUST_ID
+GROUP BY C.CUST_ID, C.CUSTNAME HAVING SUM(O.NUM_ORDERS) = 0;
+
+-------------------------
+
+// Views on External tables
+
+// Create a schema for views
+CREATE SCHEMA IF NOT EXISTS MYVIEWS;
+
+// Create a secure view
+CREATE OR REPLACE SECURE VIEW MYVIEWS.SECVW_ET_CUST
+AS
+SELECT C.CUST_ID, SUM(O.NUM_ORDERS) TOT_ORDERS
+FROM EXT_TABLES.ET_S3_CUSTOMER C
+INNER JOIN EXT_TABLES.ET_S3_ORDERS O
+ON C.CUST_ID=O.CUST_ID
+GROUP BY C.CUST_ID HAVING SUM(O.NUM_ORDERS) > 10;
+
+// Query the secure view
+SELECT * FROM MYVIEWS.SECVW_ET_CUST;
+
+
+// Create materialized view
+CREATE OR REPLACE SECURE VIEW MYVIEWS.MATVW_ET_CUST
+AS
+SELECT * FROM EXT_TABLES.ET_S3_CUSTOMER WHERE STATE='Victoria';
+
+// Query the secure view
+SELECT * FROM MYVIEWS.MATVW_ET_CUST;

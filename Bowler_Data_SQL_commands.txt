@@ -1,0 +1,132 @@
+//bowler data for a praticular team and match
+select 
+        d.bowler,
+        FLOOR(CAST(count(CAST(delivery AS INT)) AS DECIMAL) / 6)||'.'||count(bowler)%6 as overs,
+        SUM(CAST( d.run_batter AS INT)) AS runs_given
+        from delivery d join player p 
+        on (p.match_id=d.match_id and p.player=d.bowler)
+        join match m on (m.id=d.match_id)
+        where  (m.event_date='2017-01-26' 
+        and m.type='ODI' 
+        and m.team1='Australia'  
+        and m.team1=d.team )
+     
+        group by d.bowler;
+
+  Select * from delivery;
+
+//bowlers taken wickets data
+select 
+
+        d.bowler,
+        count(d.wicket_kind) as wickets 
+        from delivery d join player p 
+        on (p.match_id=d.match_id and p.player=d.bowler)
+        join match m on (m.id=d.match_id)
+        where wicket_kind not in
+        ('run out',
+        'hit wicket',
+        'retired out',
+        'retired not out',
+        'retired hurt',
+        'hit the ball twice',
+        'handled the ball',
+        'obstructing the field','') and 
+        m.type='ODI' and 
+        m.team1='Australia'and 
+        m.team1=d.team and 
+        m.event_date='2017-01-26'
+        group by d.bowler;
+
+-------BOWLER_DATA -----------------
+create or replace table bowler_data as select 
+        d.bowler,
+
+    FLOOR(CAST(count(CAST(delivery AS INT)) AS DECIMAL) / 6)||'.'||count(bowler)%6 as overs,
+    
+    SUM(CAST( d.run_batter AS INT)) AS runs_given
+    
+    from delivery d join player p 
+    on (p.match_id=d.match_id and p.player=d.bowler)
+    join match m on (m.id=d.match_id)
+    where  (m.event_date='2017-01-26' and m.type='ODI' and m.team1='Australia'  and m.team1=d.team )
+     
+  group by d.bowler;
+
+select * from bowler_data;
+
+//bowlers taken wickets data
+create or replace table bowlers_wick_data as
+    select 
+
+    d.bowler,
+    
+    count(d.wicket_kind) as wickets 
+    
+    from delivery d join player p 
+    on (p.match_id=d.match_id and p.player=d.bowler)
+    join match m on (m.id=d.match_id)
+    where wicket_kind not in('run out','hit wicket','retired out','retired not out','retired hurt','hit the ball twice','handled the ball','obstructing the field','') and m.type='ODI' and m.team1='Australia'  and m.team1=d.team and m.event_date='2017-01-26'
+     
+  group by d.bowler;
+
+select * from bowlers_wick_data;
+select * from bowler_data;
+select  bd.bowler,
+        bd.overs,
+        bd.runs_given, 
+        case
+        when (bw.wickets is null) then 0
+        else bw.wickets
+        end as wickets
+        
+        from bowler_data bd 
+        left join bowlers_wick_data 
+        bw on bd.bowler=bw.bowler;
+
+
+
+create or replace table bowler_data as select 
+        d.bowler,
+
+    FLOOR(CAST(count(CAST(delivery AS INT)) AS DECIMAL) / 6)||'.'||count(bowler)%6 as overs,
+    
+    SUM(CAST( d.run_batter AS INT)) AS runs_given
+    
+    from delivery d join player p 
+    on (p.match_id=d.match_id and p.player=d.bowler)
+    join match m on (m.id=d.match_id)
+    where  (m.event_date='2017-01-26' and m.type='ODI' and m.team1='Australia'  and m.team1=d.team )
+     
+  group by d.bowler;
+
+select * from bowler_data;
+
+//bowlers taken wickets data
+create or replace table bowlers_wick_data as
+    select 
+
+    d.bowler,
+    
+    count(d.wicket_kind) as wickets 
+    
+    from delivery d join player p 
+    on (p.match_id=d.match_id and p.player=d.bowler)
+    join match m on (m.id=d.match_id)
+    where wicket_kind not in('run out','hit wicket','retired out','retired not out','retired hurt','hit the ball twice','handled the ball','obstructing the field','') and m.type='ODI' and m.team1='Australia'  and m.team1=d.team and m.event_date='2017-01-26'
+     
+  group by d.bowler;
+
+select * from bowlers_wick_data;
+select * from bowler_data;
+select  bd.bowler,
+        bd.overs,
+        bd.runs_given as runs, 
+        case
+        when (bw.wickets is null) then 0
+        else bw.wickets
+        end as wickets
+        
+        from bowler_data bd 
+        left join bowlers_wick_data 
+        bw on bd.bowler=bw.bowler;

@@ -1,0 +1,116 @@
+ What is IICS?
+Answer: IICS is a cloud-based data integration and management platform. It enables organizations to securely access their data assets. It also allows them to efficiently integrate and manage their data across on-premises, cloud, and hybrid environments.
+
+Runtime environment:
+    A Runtime environment is the execution platform that runs a data integration or application integration tasks. You must have at least one runtime environment setup to run tasks in your organization.
+
+
+Synchronization task:
+    Synchronization task helps you synchronize data between a source and target.(insert,upsert,update,delete).
+	If u want to sync data between src to tgt without using any transformation we can go with synchronization task.
+	You can also use expressions,Filters,lookup to transform the data according to your business logic.
+	Display source fields in alphabetical order.
+	Source type can be anything but our target should be in oracle,salsforce,azure s3,not a flatfile.
+	Source type can be single mulitple or saved query if we select multiple objects then we can select n no of objects if we  want to give relationship for those objects we can give(Join condition).
+	if we choose multiple objects then we should give reference for that or else it will show error:Transformation has multiple Sources without a reference field
+	Connection-sample:This will use a mock connector.
+	In field mapping we have validate mapping button: it will validate the field mapping and if we want we can add mapplet here if we want to edit type of the tgt data we can edit using edit type button.
+	we can schedule our synchronization task.
+	
+Replication task:
+Copying Data from src to tgt.
+    A Replication task allows you to replicate data from a database table or an on-premise application to a desired target.
+	When you configure the task, you can replicate all available objects through the selected connection, or you can select objects for replication by including or excluding a set of objects.
+
+Source= DB or Salesforce Target=DB or FF
+
+we can create a run time target 
+
+	Data Backup,Offline Reporting,Data Archival.
+	Incremental load after initial full load
+	Incremental load after initial partial load
+	Full load each run
+	Target can be created at runtime.
+	Field Exclusions are there.
+	Data filters are available no other transformation are available in replication task.
+
+
+	
+Difference between a Synchronization task and Replication task:
+   In a synchronization task, you can transform the data before loading it to the target. However, in a Replication task, you can replicate the data from source to target without transforming the data.
+   A Replication task comes with a built-in incremental processing mechanism. In Synchronization task user needs to handle the incremental data processing.
+  
+ 
+Dynamic Mapping Task:
+     A Dynamic Mapping Task allows you to create and group multiple jobs within the single asset that process data based on the data flow logic defined in a mapping. Instead of creating multiple mapping tasks, you can configure multiple jobs based on the same mapping in one task.
+	 
+Data Transfer Task:
+    Moving data without changing its structure and format.
+	Here we can add second src to use as a lookup src configure the lookup src on the second src page.
+	Filter,sorter can be done in src no other transformation is not allowed.
+    Here in src connection and tgt connection can be used any connection type.
+
+PowerCenter Task:
+    we have to upload the XML file exported from Powercenter in Data Integration and run the job as a Powercenter task. You can update an existing PowerCenter task to use a different PowerCenter XML file but cannot make changes to an imported XML. 
+	
+masking task:
+   Masks src data and creates a data subset that its used fr the testing environment.
+This type of task mostly used in a non-production environment.
+
+field mapping:
+  Auto map: excat same same
+  smart map:similar name
+  
+Intelligent Structure model:
+    It determines the underlying patterns of the sample files andcreate a model to transform and generate output grps
+Structure Parse:
+    Transform input data into user defined structure format based on intelligent model.
+	
+Hierarchy Parser:Passive transformation
+     It reads hirerachy input and convert it as relational output we need a hirerachy schema for that.
+Hirerachy Builder:Active Transformation
+     It reads relational data and converts it into hirerachy/
+	
+Hirerachy Schema:
+    It defines the structure of our input files it can be in XML or Xsd.
+	
+Rest v2 connector:
+   we use it to connect to API
+   
+ Mapplet:
+    It is reusable transformation logic that you can use to transform src data before it is loaded into the tgt.
+	
+Dynamic Linking:
+    It's nothing but create a new target file during the runtime is called as dynamic linking.
+	
+why we use parameters:
+   It is used to hold values that you want to define at runtime such as src connection,joiner condition etc...
+   Input-parameters:It's not going to be change
+   In-out Parameters:it act as a task variable it can be change frequently.
+Mapping Task:
+    A mapping task allows you to process data based on the data flow logic defined in a mapping.
+We can give the input parameters, schedule the mapping, give pre and post processing commands and email notifications on success or failure.
+
+Taskflow:
+
+    Task flow is used to control the execution sequence of a Data Integration task.
+ Before you create a task flow, you must have the task that you want to use ready. You cannot create a task during the task flow creation process.
+ 
+ Linear taskflow:
+     
+	   A linear taskflow groups multiple Data Integration tasks and runs them serially in the specified order.
+You can configure email notifications for a linear taskflow. You can also configure the taskflow to run on a schedule.
+It support Synchronization, Replication, Masking, Mapping, Powercenter Task Only.
+
+
+Mapping:
+
+         Mapping is a collection of source and target objects which is tied up together through a set of transformations.
+In this we describe the flow of data from source to target
+
+
+   
+  
+  
+
+	
